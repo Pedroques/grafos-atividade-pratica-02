@@ -11,6 +11,36 @@ class Program
     static int verticeOrigem = 0;
     static bool grafoConfigurado = false;
 
+    // Lista de adjacência usada na versão da Ana.
+    static List<ArestaLista>[] listaAdjacencia = CriarListaAdjacencia();
+    static bool listaConfigurada = false;
+
+    class ArestaLista
+    {
+        public int Destino { get; set; }
+        public int Distancia { get; set; }
+
+        public ArestaLista(int destino, int distancia)
+        {
+            Destino = destino;
+            Distancia = distancia;
+        }
+    }
+
+    static List<ArestaLista>[] CriarListaAdjacencia()
+    {
+        List<ArestaLista>[] lista = new List<ArestaLista>[8];
+        for (int i = 0; i < 8; i++)
+            lista[i] = new List<ArestaLista>();
+        return lista;
+    }
+
+    static void AdicionarTrilhaLista(int u, int v, int distancia)
+    {
+        listaAdjacencia[u].Add(new ArestaLista(v, distancia));
+        listaAdjacencia[v].Add(new ArestaLista(u, distancia));
+    }
+
     // Estrutura interna no seu estilo para organizar as arestas no Kruskal
     struct Trilha : IComparable<Trilha>
     {
@@ -56,7 +86,25 @@ class Program
         ConfigurarTrilhaMatriz(5, 6, 2);
         ConfigurarTrilhaMatriz(6, 7, 1);
 
+        // Carrega o mesmo cenário padrão na lista de adjacência.
+        listaAdjacencia = CriarListaAdjacencia();
+        AdicionarTrilhaLista(0, 1, 4);
+        AdicionarTrilhaLista(0, 7, 8);
+        AdicionarTrilhaLista(1, 2, 8);
+        AdicionarTrilhaLista(1, 7, 11);
+        AdicionarTrilhaLista(2, 3, 7);
+        AdicionarTrilhaLista(2, 4, 2);
+        AdicionarTrilhaLista(2, 5, 4);
+        AdicionarTrilhaLista(2, 7, 7);
+        AdicionarTrilhaLista(3, 4, 9);
+        AdicionarTrilhaLista(3, 5, 14);
+        AdicionarTrilhaLista(3, 6, 4);
+        AdicionarTrilhaLista(4, 5, 10);
+        AdicionarTrilhaLista(5, 6, 2);
+        AdicionarTrilhaLista(6, 7, 1);
+
         grafoConfigurado = true;
+        listaConfigurada = true;
     }
 
     static void ConfigurarTrilhaMatriz(int u, int v, int distancia)
@@ -113,6 +161,223 @@ class Program
 
         Console.WriteLine("Pressione ENTER para continuar...");
         Console.ReadKey();
+        Console.Clear();
+    }
+
+    // =========================================================================
+    // FUNÇÕES DA LISTA DE ADJACÊNCIA (ANA)
+    // =========================================================================
+
+    // Permite cadastrar as trilhas para a versão que usa lista de adjacência.
+    // Informe 0 quando não existir trilha direta entre os vértices.
+    static void DefinirVerticesEArestasLista()
+    {
+        Console.Clear();
+        listaAdjacencia = CriarListaAdjacencia();
+
+        Console.WriteLine("=== Configuração por Lista de Adjacência ===");
+        Console.WriteLine("Informe a distância em metros; digite 0 se não houver trilha.");
+        Console.WriteLine("O programa pergunta cada par de vértices apenas uma vez.\n");
+
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = i + 1; j < 8; j++)
+            {
+                int distancia;
+                while (true)
+                {
+                    Console.Write($"Distância entre V{i} e V{j} (0 = sem trilha): ");
+                    if (int.TryParse(Console.ReadLine(), out distancia) && distancia >= 0)
+                        break;
+
+                    Console.WriteLine("Digite um número inteiro maior ou igual a zero.");
+                }
+
+                if (distancia > 0)
+                    AdicionarTrilhaLista(i, j, distancia);
+            }
+        }
+
+        listaConfigurada = true;
+        Console.WriteLine("\nLista de adjacência configurada. Pressione ENTER para voltar...");
+        Console.ReadLine();
+        Console.Clear();
+    }
+
+    static void ImprimirListaAdjacencia()
+    {
+        Console.Clear();
+        if (!listaConfigurada)
+            InicializarGrafoPadrao();
+
+        Console.WriteLine("=== Lista de Adjacência (trilhas e distâncias) ===\n");
+        for (int i = 0; i < 8; i++)
+        {
+            Console.Write($"V{i}: ");
+            if (listaAdjacencia[i].Count == 0)
+            {
+                Console.WriteLine("sem trilhas conectadas");
+                continue;
+            }
+
+            for (int j = 0; j < listaAdjacencia[i].Count; j++)
+            {
+                ArestaLista aresta = listaAdjacencia[i][j];
+                Console.Write($"V{aresta.Destino} ({aresta.Distancia} m)");
+                if (j < listaAdjacencia[i].Count - 1)
+                    Console.Write(" -> ");
+            }
+            Console.WriteLine();
+        }
+
+        Console.WriteLine("\nPressione ENTER para voltar ao menu...");
+        Console.ReadLine();
+        Console.Clear();
+    }
+
+    static void ExecutarDijkstraLista()
+    {
+        Console.Clear();
+        if (!listaConfigurada)
+            InicializarGrafoPadrao();
+
+        Console.WriteLine($"=== Dijkstra via Lista de Adjacência (origem: V{verticeOrigem}) ===\n");
+
+        int[] distancias = new int[8];
+        int[] predecessores = new int[8];
+        bool[] visitados = new bool[8];
+
+        for (int i = 0; i < 8; i++)
+        {
+            distancias[i] = int.MaxValue;
+            predecessores[i] = -1;
+        }
+        distancias[verticeOrigem] = 0;
+
+        for (int passo = 0; passo < 8; passo++)
+        {
+            int atual = -1;
+            int menor = int.MaxValue;
+
+            for (int v = 0; v < 8; v++)
+            {
+                if (!visitados[v] && distancias[v] < menor)
+                {
+                    menor = distancias[v];
+                    atual = v;
+                }
+            }
+
+            if (atual == -1)
+                break;
+
+            visitados[atual] = true;
+
+            foreach (ArestaLista aresta in listaAdjacencia[atual])
+            {
+                int vizinho = aresta.Destino;
+                if (!visitados[vizinho] &&
+                    distancias[atual] != int.MaxValue &&
+                    distancias[atual] + aresta.Distancia < distancias[vizinho])
+                {
+                    distancias[vizinho] = distancias[atual] + aresta.Distancia;
+                    predecessores[vizinho] = atual;
+                }
+            }
+        }
+
+        for (int v = 0; v < 8; v++)
+        {
+            Console.Write($"Destino V{v}: ");
+            if (distancias[v] == int.MaxValue)
+            {
+                Console.WriteLine("inalcançável");
+                continue;
+            }
+
+            Console.WriteLine($"menor distância = {distancias[v]} m");
+            Console.Write("Caminho: ");
+            RastrearCaminhoDijkstra(predecessores, v);
+            Console.WriteLine("\n");
+        }
+
+        Console.WriteLine("Pressione ENTER para voltar...");
+        Console.ReadLine();
+        Console.Clear();
+    }
+
+    static void ExecutarPrimLista()
+    {
+        Console.Clear();
+        if (!listaConfigurada)
+            InicializarGrafoPadrao();
+
+        Console.WriteLine("=== Prim via Lista de Adjacência (Árvore Geradora Mínima) ===\n");
+
+        bool[] incluidos = new bool[8];
+        int[] menoresPesos = new int[8];
+        int[] pais = new int[8];
+
+        for (int i = 0; i < 8; i++)
+        {
+            menoresPesos[i] = int.MaxValue;
+            pais[i] = -1;
+        }
+        menoresPesos[0] = 0;
+
+        int custoTotal = 0;
+        int verticesProcessados = 0;
+
+        for (int passo = 0; passo < 8; passo++)
+        {
+            int atual = -1;
+            int menor = int.MaxValue;
+
+            for (int v = 0; v < 8; v++)
+            {
+                if (!incluidos[v] && menoresPesos[v] < menor)
+                {
+                    menor = menoresPesos[v];
+                    atual = v;
+                }
+            }
+
+            if (atual == -1)
+                break;
+
+            incluidos[atual] = true;
+            verticesProcessados++;
+
+            foreach (ArestaLista aresta in listaAdjacencia[atual])
+            {
+                int vizinho = aresta.Destino;
+                if (!incluidos[vizinho] && aresta.Distancia < menoresPesos[vizinho])
+                {
+                    menoresPesos[vizinho] = aresta.Distancia;
+                    pais[vizinho] = atual;
+                }
+            }
+        }
+
+        if (verticesProcessados != 8)
+        {
+            Console.WriteLine("Não foi possível gerar a árvore: o grafo não é conexo.");
+        }
+        else
+        {
+            Console.WriteLine("Trilhas selecionadas:");
+            for (int v = 1; v < 8; v++)
+            {
+                Console.WriteLine($"V{pais[v]} <-> V{v} | Distância: {menoresPesos[v]} m");
+                custoTotal += menoresPesos[v];
+            }
+
+            Console.WriteLine($"\nDistância total da árvore: {custoTotal} m");
+            Console.WriteLine("Quantidade de trilhas selecionadas: 7");
+        }
+
+        Console.WriteLine("\nPressione ENTER para voltar...");
+        Console.ReadLine();
         Console.Clear();
     }
 
@@ -347,10 +612,7 @@ class Program
                     DefinirVerticesEArestasMatriz();
                     break;
                 case 2:
-                    Console.Clear();
-                    Console.WriteLine("Espaço reservado para a Lista de Adjacência.");
-                    Console.ReadKey();
-                    Console.Clear();
+                    DefinirVerticesEArestasLista();
                     break;
                 case 3:
                     DefinirVerticeOrigem();
@@ -359,28 +621,19 @@ class Program
                     ImprimirMatrizAdjacencia();
                     break;
                 case 5:
-                    Console.Clear();
-                    Console.WriteLine("Espaço reservado para a impressão da Lista de Adjacência.");
-                    Console.ReadKey();
-                    Console.Clear();
+                    ImprimirListaAdjacencia();
                     break;
                 case 6:
                     ExecutarDijkstraMatriz();
                     break;
                 case 7:
-                    Console.Clear();
-                    Console.WriteLine("Espaço reservado para o Dijkstra por Lista.");
-                    Console.ReadKey();
-                    Console.Clear();
+                    ExecutarDijkstraLista();
                     break;
                 case 8:
                     ExecutarKruskalMatriz();
                     break;
                 case 9:
-                    Console.Clear();
-                    Console.WriteLine("Espaço reservado para o Algoritmo de Prim.");
-                    Console.ReadKey();
-                    Console.Clear();
+                    ExecutarPrimLista();
                     break;
                 case 10:
                     InicializarGrafoPadrao();
